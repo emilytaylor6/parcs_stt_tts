@@ -28,6 +28,8 @@ setup(
             'parcs_tts = parcs_tts.parcs_tts:main',
             'parcs_tts_test = parcs_tts.parcs_tts_test:main',
             'tts_tester = parcs_tts.tts_tester:main',
+            'chatbot_tts = parcs_tts.chatbot_tts:main',
+            'chatbot =  parcs_tts.chatbot:main'
         ],
     },
 )

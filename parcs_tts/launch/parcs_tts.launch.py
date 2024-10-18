@@ -22,5 +22,19 @@ def generate_launch_description():    # a launcher for text to speech and its te
             executable='tts_tester',
             name='tts_tester',
             output='screen',
-        )
+        ),
+        # Node(
+        #     package='parcs_tts',
+        #     namespace='parcs_tts',
+        #     executable='chatbot_tts',
+        #     name='chatbot_tts',
+        #     output='screen',
+        # ),
+        # Node(
+        #     package='parcs_tts',
+        #     namespace='parcs_tts',
+        #     executable='chatbot',
+        #     name='chatbot',
+        #     output='screen',
+        # )
     ])

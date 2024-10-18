@@ -1,4 +1,4 @@
-from pynput import keyboard
+#! /usr/bin/env python3
 
 import rclpy
 from rclpy.node import Node
@@ -6,33 +6,31 @@ from rclpy.action import ActionClient
 from parcs_stt_tts_msgs.action import TTS
 from parcs_stt_tts_msgs.srv import Stop
 
-# uncomment if you'd like to use the keyboard module instead of pynput
-# import keyboard
-# import threading
-# import time
-
-class STTTester(Node):
+class ChatbotTTS(Node):
 
     def __init__(self):
-        super().__init__('tts_tester')
+        super().__init__('chatbot_tts')
 
         self._tts_action_client = ActionClient(self, TTS, 'tts')
         self._goal_in_progress = False
 
         self._stop_srv_client = self.create_client(Stop, 'stop')
-
+        self.msg = ''
         while not self._stop_srv_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('Waiting for stop service to become available...')
         self.get_logger().info("Stop service established!")
 
-        self.charArray = [] # the empty character array to build
-        self.charMsg = '' # the total string
+    def give_input(self, input):
+        if input == 'quit' and self._goal_in_progress:
+            self.get_logger().info("Pressed stop. Sending service request...")
+            self.stop_serv_tts()
+            self.msg = ''
+        elif not self._goal_in_progress:
+            self.msg = input
+            self.send_tts_goal(self.msg)
+            self.msg = ''
+        return
 
-        self._keyboard_listener = keyboard.Listener(on_press=self.key_input)
-        self._keyboard_listener.start()
-
-        self.get_logger().info('TTS testing node ready. Type anything then press "Enter" to activate TTS. Type "s" to stop TTS at any time.\n--------------------------------------------')
-    
     '''TTS'''
     def send_tts_goal(self, msg):
         goal_msg = TTS.Goal()
@@ -80,52 +78,14 @@ class STTTester(Node):
         except Exception as e:
             self.get_logger().error(f"Stop service call failed: {e}")
 
-    '''Handles key presses to send goals'''
-    def key_input(self, key):
-        try:
-            if key.char == 's' and self._goal_in_progress:
-                self.get_logger().info("Pressed stop. Sending service request...")
-                self.stop_serv_tts()
-                self.charArray = []
-                self.charMsg = ''
-            elif not self._goal_in_progress:
-                if hasattr(key, 'char') and key.char is not None:
-                    self.charArray.append(key.char)
-                else:
-                    char = str(key)
-                    if 'Key.' in char:
-                        char = char.replace('Key.', '')
-                    self.charArray.append(char)
-        except AttributeError: #enter is an attribute error
-            if not self._goal_in_progress:
-                if key == keyboard.Key.enter:
-                    self.charMsg = ''.join(str(item) for item in self.charArray)
-                    # self.get_logger().info(f"Enter pressed. Current message: {self.charMsg}")
-                    self.send_tts_goal(self.charMsg) 
-                    self.charArray = []
-                    self.charMsg = ''
-                elif key == keyboard.Key.backspace:
-                    if len(self.charArray) > 0:
-                        self.charArray.pop()
-                        # self.get_logger().info(f"Backspace pressed. Current message: {''.join(str(item) for item in self.charArray)}")
-                elif key == keyboard.Key.space:
-                    self.charArray.append(' ')
-                else:
-                    # self.get_logger().info("Not a valid key for text input.")
-                    pass
-
 def main(args=None):
     rclpy.init(args=args)
 
-    node = STTTester()
+    node = ChatbotTTS()
 
     try: 
         rclpy.spin(node)
-    except KeyboardInterrupt:
-        node.get_logger().info("Keyboard interrupt detected, shutting down.")
-    
     finally:
-        node._keyboard_listener.stop() # stops keyboard listener
         node.destroy_node()
         rclpy.shutdown()
 
