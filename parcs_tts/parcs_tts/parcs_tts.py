@@ -17,6 +17,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from std_msgs.msg import String 
 from action_msgs.msg import GoalStatus
+import json
 
 from parcs_stt_tts_msgs.action import TTS
 from parcs_stt_tts_msgs.srv import Stop
@@ -139,22 +140,35 @@ class ParcsTTS(Node):
 
         goal = self._goal_handle.request
         tts_string = goal.tts 
+        tools = json.loads(goal.tools)
 
         self.get_logger().info(f"Received TTS goal: {tts_string}")
-
-        # generates responses if desired
-        if self.gen_response_param == 'true':
-            response = self.generate_response(goal.tts)
-            tts_string = response
-
-        # escapes apostrophes and quotations for processing
-        tts_string.replace("'", "\\'")
-        tts_string.replace('"', '\\"')
 
         # establishes the result
         result = TTS.Result()
         result.msg = '' # empty as placeholder value
         result.stopped = False # false until manually stopped
+        result.tool_call = ''
+
+        # generates responses if desired
+        if goal.generate_response:
+            #function calling llm
+            response = self.function_call(goal.tts, tools)
+            # response = self.generate_response(goal.tts)
+            if response.content is None:
+                #function getting called
+                tool_guide = response.tool_calls[0]
+                pols = json.loads(tool_guide.function.arguments)
+                self.get_logger().info(f"inspect: {pols, type(pols)}")
+
+                result.tool_call = json.dumps(pols)
+                return result
+            tts_string = response.content
+
+
+        # escapes apostrophes and quotations for processing
+        tts_string.replace("'", "\\'")
+        tts_string.replace('"', '\\"')
 
         try:
             # thread that handles all text to speech 
@@ -256,6 +270,19 @@ class ParcsTTS(Node):
 
         return msg
     
+    def function_call(self, msg, tools):
+        if self.tts_interpreter_param == 'openai':
+            response = openai.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": self.personality_param},
+                    {"role": "user", "content": msg},
+                ],
+                tools=tools
+            )
+            response_msg =  response.choices[0].message
+            return response_msg
+
     '''generates a response via AI if parameters allow for it'''
     def generate_response(self, query):
         
