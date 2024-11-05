@@ -28,8 +28,9 @@ class STTTester(Node):
         self.charArray = [] # the empty character array to build
         self.charMsg = '' # the total string
 
-        self._keyboard_listener = keyboard.Listener(on_press=self.key_input)
-        self._keyboard_listener.start()
+        # self._keyboard_listener = keyboard.Listener(on_press=self.key_input)
+        # self._keyboard_listener.start()
+        self.send_tts_goal("please")
 
         self.get_logger().info('TTS testing node ready. Type anything then press "Enter" to activate TTS. Type "s" to stop TTS at any time.\n--------------------------------------------')
     
@@ -37,6 +38,7 @@ class STTTester(Node):
     def send_tts_goal(self, msg):
         goal_msg = TTS.Goal()
         goal_msg.tts = msg
+        goal_msg.tools = ''
 
         self.get_logger().info("Waiting for TTS action server...")
         self._tts_action_client.wait_for_server()

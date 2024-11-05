@@ -9,5 +9,6 @@ bool generate_response
 string msg # the message that was spoken, empty string if stopped
 bool stopped # true if stopped manually, false if not
 string tool_call
+string function_name
 
 ---

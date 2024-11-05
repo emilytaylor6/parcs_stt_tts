@@ -140,7 +140,7 @@ class ParcsTTS(Node):
 
         goal = self._goal_handle.request
         tts_string = goal.tts 
-        tools = json.loads(goal.tools)
+        
 
         self.get_logger().info(f"Received TTS goal: {tts_string}")
 
@@ -153,15 +153,18 @@ class ParcsTTS(Node):
         # generates responses if desired
         if goal.generate_response:
             #function calling llm
+            tools = json.loads(goal.tools)
             response = self.function_call(goal.tts, tools)
             # response = self.generate_response(goal.tts)
             if response.content is None:
                 #function getting called
                 tool_guide = response.tool_calls[0]
                 pols = json.loads(tool_guide.function.arguments)
-                self.get_logger().info(f"inspect: {pols, type(pols)}")
+                
 
                 result.tool_call = json.dumps(pols)
+                result.function_name = tool_guide.function.name
+                self.get_logger().info(f"inspect: {result}, {type(result.tool_call)}, {type(result)}")                
                 return result
             tts_string = response.content
 
@@ -278,7 +281,8 @@ class ParcsTTS(Node):
                     {"role": "system", "content": self.personality_param},
                     {"role": "user", "content": msg},
                 ],
-                tools=tools
+                tools=tools,
+                tool_choice="auto"
             )
             response_msg =  response.choices[0].message
             return response_msg
@@ -385,10 +389,12 @@ def main(args=None):
         executor.add_node(tts_node)
 
         executor.spin()
-
-        rclpy.shutdown()
     except (KeyboardInterrupt, Exception):
         pass
+    
+    tts_node.destroy_node()
+    executor.shutdown()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
