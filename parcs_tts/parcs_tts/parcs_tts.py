@@ -148,26 +148,6 @@ class ParcsTTS(Node):
         result = TTS.Result()
         result.msg = '' # empty as placeholder value
         result.stopped = False # false until manually stopped
-        result.tool_call = ''
-
-        # generates responses if desired
-        if goal.generate_response:
-            #function calling llm
-            tools = json.loads(goal.tools)
-            response = self.function_call(goal.tts, tools)
-            # response = self.generate_response(goal.tts)
-            if response.content is None:
-                #function getting called
-                tool_guide = response.tool_calls[0]
-                pols = json.loads(tool_guide.function.arguments)
-                
-
-                result.tool_call = json.dumps(pols)
-                result.function_name = tool_guide.function.name
-                self.get_logger().info(f"inspect: {result}, {type(result.tool_call)}, {type(result)}")                
-                return result
-            tts_string = response.content
-
 
         # escapes apostrophes and quotations for processing
         tts_string.replace("'", "\\'")
@@ -272,20 +252,6 @@ class ParcsTTS(Node):
         self.stop_flag = True
 
         return msg
-    
-    def function_call(self, msg, tools):
-        if self.tts_interpreter_param == 'openai':
-            response = openai.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": self.personality_param},
-                    {"role": "user", "content": msg},
-                ],
-                tools=tools,
-                tool_choice="auto"
-            )
-            response_msg =  response.choices[0].message
-            return response_msg
 
     '''generates a response via AI if parameters allow for it'''
     def generate_response(self, query):
